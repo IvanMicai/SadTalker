@@ -43,4 +43,5 @@ RUN pip install -r requirements.txt
 # Clone the SadTalker repository
 COPY ./ /app/SadTalker
 
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:32
 ENTRYPOINT ["python3", "server.py"]
