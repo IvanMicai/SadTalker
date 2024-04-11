@@ -18,7 +18,7 @@ def run_inference_process(data):
         'input_yaw', 'input_pitch', 'input_roll', 'ref_eyeblink', 'ref_pose'
     ]
     param_flags = [
-        'half', "still"
+        'half', "still", "cpu"
     ]
     for key in param_keys:
         value = data.get(key)
