@@ -14,13 +14,21 @@ def run_inference_process(data):
 
     cmd = ['python', 'inference.py']
     param_keys = [
-        'source_image', 'driven_audio', 'result_dir', 'preprocess', 'pose_style',
+        'source_image', 'driven_audio', 'result_dir', 'size', 'preprocess', 'pose_style',
         'input_yaw', 'input_pitch', 'input_roll', 'ref_eyeblink', 'ref_pose'
+    ]
+    param_flags = [
+        'half', "still"
     ]
     for key in param_keys:
         value = data.get(key)
         if value is not None:
             cmd += [f'--{key}', str(value)]
+    for key in param_flags:
+        value = data.get(key)
+        if value is not None:
+            cmd += [f'--{key}']
+
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
