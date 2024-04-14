@@ -99,49 +99,74 @@ def keypoint_transformation(kp_canonical, he, wo_exp=False):
 
 
 
-def make_animation(source_image, source_semantics, target_semantics,
-                            generator, kp_detector, he_estimator, mapping, 
-                            yaw_c_seq=None, pitch_c_seq=None, roll_c_seq=None,
-                            use_exp=True, use_half=False):
-    with torch.no_grad():
+def make_animation(
+    source_image,
+    source_semantics,
+    target_semantics,
+    generator,
+    kp_detector,
+    he_estimator,
+    mapping,
+    yaw_c_seq=None,
+    pitch_c_seq=None,
+    roll_c_seq=None,
+    use_exp=True,
+    use_half=False
+):
+    # speedup on ampere gpu
+    if hasattr(torch, "channels_last"):
+        source_image = source_image.contiguous(memory_format=torch.channels_last)
+        for param in generator.parameters():
+            if param.data.dim() == 4:
+                param.data = param.data.contiguous(memory_format=torch.channels_last)
+
+    infer_mode = torch.no_grad
+    if hasattr(torch, "inference_mode"):  # for torch >=2.*
+        infer_mode = torch.inference_mode
+
+    with infer_mode(), torch.autocast("cuda", torch.float16, enabled=use_half):
         predictions = []
-        generator = generator.half() if use_half else generator
 
         kp_canonical = kp_detector(source_image)
         he_source = mapping(source_semantics)
         kp_source = keypoint_transformation(kp_canonical, he_source)
-    
-        for frame_idx in tqdm(range(target_semantics.shape[1]), 'Face Renderer:'):
+
+        for frame_idx in tqdm(range(target_semantics.shape[1]), "Face Renderer:"):
+            generator = generator.half() if use_half else generator
+            print(f"frame_idx {frame_idx}")
             # still check the dimension
             # print(target_semantics.shape, source_semantics.shape)
             target_semantics_frame = target_semantics[:, frame_idx]
             he_driving = mapping(target_semantics_frame)
             if yaw_c_seq is not None:
-                he_driving['yaw_in'] = yaw_c_seq[:, frame_idx]
+                he_driving["yaw_in"] = yaw_c_seq[:, frame_idx]
             if pitch_c_seq is not None:
-                he_driving['pitch_in'] = pitch_c_seq[:, frame_idx] 
+                he_driving["pitch_in"] = pitch_c_seq[:, frame_idx]
             if roll_c_seq is not None:
-                he_driving['roll_in'] = roll_c_seq[:, frame_idx] 
-            
+                he_driving["roll_in"] = roll_c_seq[:, frame_idx]
+
             kp_driving = keypoint_transformation(kp_canonical, he_driving)
-                
             kp_norm = kp_driving
+
             if use_half:
                 source_image = source_image.half()
                 kp_source = {k: v.half() for k, v in kp_source.items()}
                 kp_norm = {k: v.half() for k, v in kp_norm.items()}
+
             out = generator(source_image, kp_source=kp_source, kp_driving=kp_norm)
-            '''
+            """
             source_image_new = out['prediction'].squeeze(1)
             kp_canonical_new =  kp_detector(source_image_new)
-            he_source_new = he_estimator(source_image_new) 
+            he_source_new = he_estimator(source_image_new)
             kp_source_new = keypoint_transformation(kp_canonical_new, he_source_new, wo_exp=True)
             kp_driving_new = keypoint_transformation(kp_canonical_new, he_driving, wo_exp=True)
             out = generator(source_image_new, kp_source=kp_source_new, kp_driving=kp_driving_new)
-            '''
-            predictions.append(out['prediction'])
+            """
+
+            predictions.append(out['prediction'].cpu())  # append directly to CPU-stored predictions list
         predictions_ts = torch.stack(predictions, dim=1)
     return predictions_ts
+
 
 class AnimateModel(torch.nn.Module):
     """

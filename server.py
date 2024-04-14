@@ -15,7 +15,7 @@ def run_inference_process(data):
     cmd = ['python', 'inference.py']
     param_keys = [
         'source_image', 'driven_audio', 'result_dir', 'size', 'preprocess', 'pose_style',
-        'input_yaw', 'input_pitch', 'input_roll', 'ref_eyeblink', 'ref_pose'
+        'input_yaw', 'input_pitch', 'input_roll', 'ref_eyeblink', 'ref_pose', "enhancer"
     ]
     param_flags = [
         'half', "still", "cpu"

@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 
 # Install PyTorch with CUDA 11.3 support
-RUN pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/whl/cu113
+RUN pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2
 
 # Install dlib
 RUN pip install dlib-bin
